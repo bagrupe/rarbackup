@@ -177,6 +177,10 @@ function Start-Backup {
 
 }
 
+if(Test-Path -Path "$PSScriptRoot/hooks/pre-backup.ps1") {
+    & pwsh "$PSScriptRoot/hooks/pre-backup.ps1"
+}
+
 if(!$prefix) {
     $prefix = Get-Date -Format "yyyy-MM"
 }
@@ -189,4 +193,8 @@ if($destination) {
     Start-Backup -configdir $configdir -prefix $prefix -destination $destination
 } else {
     Start-Backup -configdir $configdir -prefix $prefix
+}
+
+if(Test-Path -Path "$PSScriptRoot/hooks/post-backup.ps1") {
+    & pwsh "$PSScriptRoot/hooks/post-backup.ps1"
 }
