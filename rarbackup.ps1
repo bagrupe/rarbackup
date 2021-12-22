@@ -4,7 +4,9 @@ param (
         [parameter(Mandatory = $False)]
         [String] $configdir,
         [parameter(Mandatory = $False)]
-        [String] $destination
+        [String] $destination,
+        [parameter(Mandatory = $False)]
+        [int] $timeout = 30
 )
 
 <#
@@ -114,7 +116,9 @@ function Start-Backup {
         [parameter(Mandatory = $True)]
         [String] $prefix,
         [parameter(Mandatory = $False)]
-        [String] $destination
+        [String] $destination,
+        [parameter(Mandatory = $False)]
+        [int] $timeout = 30
     )
 
     $backupfiles = @()
@@ -159,7 +163,7 @@ function Start-Backup {
         $stats.ToString()
 
         while(!$stats.CanStartJob()) {
-            Start-Sleep 60
+            Start-Sleep $timeout
             $stats.ToString()
 
             $finished, $procs = $procs.Where({$_.HasExited}, 'Split')
@@ -190,9 +194,9 @@ if(!$configdir) {
 }
 
 if($destination) {
-    Start-Backup -configdir $configdir -prefix $prefix -destination $destination
+    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -destination $destination
 } else {
-    Start-Backup -configdir $configdir -prefix $prefix
+    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout
 }
 
 if(Test-Path -Path "$PSScriptRoot/hooks/post-backup.ps1") {
