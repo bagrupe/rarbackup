@@ -6,7 +6,7 @@ param (
         [parameter(Mandatory = $False)]
         [String] $destination,
         [parameter(Mandatory = $False)]
-        [int] $timeout = 30
+        [int] $timeout = 90
 )
 
 <#
@@ -20,6 +20,8 @@ class BackupFile {
     [string] $filename
     [string] $options
 
+    [int] $priority
+
     BackupFile() { }
 
     BackupFile(
@@ -28,7 +30,9 @@ class BackupFile {
 
         [string] $sourcedir,
         [string] $filename,
-        [string] $options
+        [string] $options,
+
+        [int] $priority
     ) {
         $this.backupsource = $backupsource
         $this.backupdestination = $backupdestination
@@ -36,11 +40,13 @@ class BackupFile {
         $this.sourcedir = $sourcedir
         $this.filename = $filename
         $this.options = $options
+
+        $this.priority = $priority
     }
 
     [string]ToString() {
-        return ("BackupFile Source: {0}/{1} Destination: {2}/{3} Options: {4}`n" -f
-            $this.backupsource, $this.sourcedir, $this.backupdestination, $this.filename, $this.options)
+        return ("BackupFile Source: {0}/{1} Destination: {2}/{3} Options: {4} Priority: {5}`n" -f
+            $this.backupsource, $this.sourcedir, $this.backupdestination, $this.filename, $this.options, $this.priority)
     }
 }
 
@@ -128,6 +134,7 @@ function Start-Backup {
     foreach($file in $list) {
         $config = (Get-Content $file -Raw) | ConvertFrom-Json
         $source = $config.Source
+
         if(!$destination) {
             $destination = $config.Destination
         }
@@ -143,17 +150,21 @@ function Start-Backup {
         }
 
         foreach($backup in $config.backups) {
+            $priority = 999
+
+            if($backup.Priority) {
+                $priority = $backup.Priority
+            }
+
             $filename = "$prefix-$($backup.Name).rar"
 
-            $backupfiles += [BackupFile]::new($source, $destination, $backup.Source, $filename, $backup.Options)
+            $backupfiles += [BackupFile]::new($source, $destination, $backup.Source, $filename, $backup.Options, $priority)
         }
     }
 
     $stats = [BackupStats]::new($backupfiles.Count, 3)
 
-    $backupfiles = $backupfiles | Sort-Object -Property filename
-
-    $backupfiles
+    $backupfiles = $backupfiles | Sort-Object -Property priority
 
     $procs = @()
     foreach($backupfile in $backupfiles) {
