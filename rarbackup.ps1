@@ -6,7 +6,9 @@ param (
         [parameter(Mandatory = $False)]
         [String] $destination,
         [parameter(Mandatory = $False)]
-        [int] $timeout = 90
+        [int] $timeout = 60,
+        [parameter(Mandatory = $False)]
+        [int] $concurrentBackups = 4
 )
 
 <#
@@ -124,7 +126,9 @@ function Start-Backup {
         [parameter(Mandatory = $False)]
         [String] $destination,
         [parameter(Mandatory = $False)]
-        [int] $timeout = 30
+        [int] $timeout = 30,
+        [parameter(Mandatory = $False)]
+        [int] $concurrentBackups = 4
     )
 
     $backupfiles = @()
@@ -162,7 +166,7 @@ function Start-Backup {
         }
     }
 
-    $stats = [BackupStats]::new($backupfiles.Count, 3)
+    $stats = [BackupStats]::new($backupfiles.Count, $concurrentBackups)
 
     $backupfiles = $backupfiles | Sort-Object -Property priority
 
@@ -205,9 +209,9 @@ if(!$configdir) {
 }
 
 if($destination) {
-    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -destination $destination
+    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -destination $destination -concurrentBackups $concurrentBackups
 } else {
-    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout
+    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -concurrentBackups $concurrentBackups
 }
 
 if(Test-Path -Path "$PSScriptRoot/hooks/post-backup.ps1") {
