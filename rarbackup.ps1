@@ -8,7 +8,10 @@ param (
         [parameter(Mandatory = $False)]
         [int] $timeout = 60,
         [parameter(Mandatory = $False)]
-        [int] $concurrentBackups = 4
+        [int] $concurrentBackups = 4,
+        [parameter(Mandatory = $False)]
+        [ValidateSet("rar", "7z")]
+        [String] $compressor = "rar"
 )
 
 <#
@@ -128,8 +131,17 @@ function Start-Backup {
         [parameter(Mandatory = $False)]
         [int] $timeout = 30,
         [parameter(Mandatory = $False)]
-        [int] $concurrentBackups = 4
+        [int] $concurrentBackups = 4,
+        [parameter(Mandatory = $False)]
+        [ValidateSet("rar", "7z")]
+        [String] $compressor = "rar"
     )
+
+    $compressors = @{
+        "rar" = @{ extension = ".rar"; command = "rar"; args = "a {0} `"{1}`" `"{2}`"" }
+        "7z"  = @{ extension = ".7z";  command = "7z";  args = "a {0} `"{1}`" `"{2}`"" }
+    }
+    $comp = $compressors[$compressor]
 
     $backupfiles = @()
 
@@ -160,7 +172,7 @@ function Start-Backup {
                 $priority = $backup.Priority
             }
 
-            $filename = "$prefix-$($backup.Name).rar"
+            $filename = "$prefix-$($backup.Name)$($comp.extension)"
 
             $backupfiles += [BackupFile]::new($source, $destination, $backup.Source, $filename, $backup.Options, $priority)
         }
@@ -172,7 +184,7 @@ function Start-Backup {
 
     $procs = @()
     foreach($backupfile in $backupfiles) {
-        $procs += Start-Process -FilePath "rar" -ArgumentList "a $($backupfile.options) `"$($backupfile.backupdestination)/$($backupfile.filename)`" `"$($backupfile.backupsource)/$($backupfile.sourcedir)`"" -PassThru #-RedirectStandardOutput "$($backupfile.backupdestination)/$($backupfile.filename).log"
+        $procs += Start-Process -FilePath $comp.command -ArgumentList ($comp.args -f $backupfile.options, "$($backupfile.backupdestination)/$($backupfile.filename)", "$($backupfile.backupsource)/$($backupfile.sourcedir)") -PassThru
         $stats.StartJob()
 
         $stats.ToString()
@@ -209,9 +221,9 @@ if(!$configdir) {
 }
 
 if($destination) {
-    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -destination $destination -concurrentBackups $concurrentBackups
+    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -destination $destination -concurrentBackups $concurrentBackups -compressor $compressor
 } else {
-    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -concurrentBackups $concurrentBackups
+    Start-Backup -configdir $configdir -prefix $prefix -timeout $timeout -concurrentBackups $concurrentBackups -compressor $compressor
 }
 
 if(Test-Path -Path "$PSScriptRoot/hooks/post-backup.ps1") {
