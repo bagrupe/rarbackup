@@ -138,10 +138,38 @@ function Start-Backup {
     )
 
     $compressors = @{
-        "rar" = @{ extension = ".rar"; command = "rar"; args = "a {0} `"{1}`" `"{2}`"" }
-        "7z"  = @{ extension = ".7z";  command = "7z";  args = "a {0} `"{1}`" `"{2}`"" }
+        "rar" = @{
+            extension = ".rar"
+            command = "rar"
+            args = "a {0} `"{1}`" `"{2}`""
+            install = @{
+                Windows = "winget install win.rar.WinRAR"
+                macOS   = "brew install rar"
+                Linux   = "sudo apt-get install rar  # Debian/Ubuntu`n                         sudo dnf install rar     # Fedora/RHEL"
+            }
+        }
+        "7z" = @{
+            extension = ".7z"
+            command = "7z"
+            args = "a {0} `"{1}`" `"{2}`""
+            install = @{
+                Windows = "winget install 7zip.7zip"
+                macOS   = "brew install 7zip"
+                Linux   = "sudo apt-get install 7zip  # Debian/Ubuntu`n                         sudo dnf install 7zip     # Fedora/RHEL"
+            }
+        }
     }
     $comp = $compressors[$compressor]
+
+    if (!(Get-Command $comp.command -ErrorAction SilentlyContinue)) {
+        $os = if ($IsWindows) { "Windows" } elseif ($IsMacOS) { "macOS" } else { "Linux" }
+        Write-Host -ForegroundColor Red "Error: '$($comp.command)' is not installed or not found in PATH."
+        Write-Host ""
+        Write-Host "To install $compressor on $os, run:"
+        Write-Host -ForegroundColor Cyan "  $($comp.install[$os])"
+        Write-Host ""
+        return
+    }
 
     $backupfiles = @()
 
